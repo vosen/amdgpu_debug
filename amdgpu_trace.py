@@ -51,10 +51,14 @@ class AmdgpuTraceCommand(gdb.Command):
         split_args = args.split()
         # gdb.parse_and_eval finds only one occurence of the function
         # gdb.lookup_symbol does not find amdgpu functions
-        functions = gdb.execute(f"i functions {split_args[0]}", to_string=True).splitlines()
-        functions = [f for f in [self.extract_fn_address(f) for f in functions] if f is not None]
-        if len(functions) == 0:
-            raise gdb.GdbError (f"`info function {split_args[0]}` returned no addresses")
+        functions = None
+        try:
+            functions = [int(split_args[0])]
+        except ValueError:
+            functions = gdb.execute(f"i functions {split_args[0]}", to_string=True).splitlines()
+            functions = [f for f in [self.extract_fn_address(f) for f in functions] if f is not None]
+            if len(functions) == 0:
+                raise gdb.GdbError (f"`info function {split_args[0]}` returned no addresses")
         lane = int(split_args[1])
         path = split_args[2]
         min_offset = int(split_args[3]) if len(split_args) > 3 else 0
