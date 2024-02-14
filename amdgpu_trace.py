@@ -13,7 +13,11 @@ class AmdgpuTraceBreakpoint(gdb.Breakpoint):
         self.instruction_offset = instruction_offset
         self.instruction = instruction
         self.registers = registers
-        location = "*(%s+%d) if $_lane == %d" % (fn_address, instruction_offset, lane)
+        location = None
+        if instruction.startswith('s_'):
+            location = "*(%s+%d)" % (fn_address, instruction_offset)
+        else:
+            location = "*(%s+%d) if ($exec & 1 << %d)" % (fn_address, instruction_offset, lane)
         super(AmdgpuTraceBreakpoint, self).__init__(location, internal=True)
 
     def stop(self):
@@ -53,7 +57,7 @@ class AmdgpuTraceCommand(gdb.Command):
         # gdb.lookup_symbol does not find amdgpu functions
         functions = None
         try:
-            functions = [int(split_args[0])]
+            functions = [int(split_args[0], 16)]
         except ValueError:
             functions = gdb.execute(f"i functions {split_args[0]}", to_string=True).splitlines()
             functions = [f for f in [self.extract_fn_address(f) for f in functions] if f is not None]
